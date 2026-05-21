@@ -56,22 +56,37 @@ cp config.yaml "$OBSIDIAN_VAULT_PATH/99_System/Config/research_interests.yaml"
 Copy-Item config.yaml "$env:OBSIDIAN_VAULT_PATH\99_System\Config\research_interests.yaml"
 ```
 
-### 2.4 将技能安装到 Claude Code
+### 2.4 将技能安装到 Claude Code / Codex
 
-将 evil-read-arxiv 目录中的四个技能文件夹复制到你的 Claude Code skills 目录：
+推荐使用安装脚本，一次安装到 Claude Code 和 Codex：
+
+```bash
+python scripts/install_skills.py --target both
+```
+
+也可以只安装到其中一个运行时：
+
+```bash
+python scripts/install_skills.py --target claude
+python scripts/install_skills.py --target codex
+```
+
+手动安装时，将五个技能目录复制到对应的 skills 目录：
 
 ```bash
 # macOS/Linux
-cp -r evil-read-arxiv/start-my-day ~/.claude/skills/
+cp -r evil-read-arxiv/start-my-day ~/.claude/skills/      # 或 ~/.codex/skills/
 cp -r evil-read-arxiv/paper-analyze ~/.claude/skills/
 cp -r evil-read-arxiv/extract-paper-images ~/.claude/skills/
 cp -r evil-read-arxiv/paper-search ~/.claude/skills/
+cp -r evil-read-arxiv/conf-papers ~/.claude/skills/
 
 # Windows PowerShell
 Copy-Item -Recurse evil-read-arxiv\start-my-day $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\paper-analyze $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\extract-paper-images $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\paper-search $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse evil-read-arxiv\conf-papers $env:USERPROFILE\.claude\skills\
 ```
 
 ## 第三步：创建 Obsidian 目录结构
@@ -90,7 +105,7 @@ Copy-Item -Recurse evil-read-arxiv\paper-search $env:USERPROFILE\.claude\skills\
 
 ## 开始使用
 
-### 1. 打开 Claude Code
+### 1. 打开 Claude Code 或 Codex
 
 在你的 Obsidian Vault 目录中打开终端：
 
@@ -98,13 +113,14 @@ Copy-Item -Recurse evil-read-arxiv\paper-search $env:USERPROFILE\.claude\skills\
 # 切换到你的 Obsidian Vault 目录
 cd "$OBSIDIAN_VAULT_PATH"
 
-# 启动 Claude Code
+# 启动 Claude Code 或 Codex
 claude-code
+# codex
 ```
 
 ### 2. 开始每日论文推荐
 
-在 Claude Code 中输入：
+在 Claude Code 或 Codex 中输入：
 
 ```
 start my day
@@ -112,7 +128,7 @@ start my day
 
 ### 3. 分析单篇论文
 
-在 Claude Code 中输入：
+在 Claude Code 或 Codex 中输入：
 
 ```
 paper-analyze 2602.12345

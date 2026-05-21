@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAnthropicClientWithSettings } from "@/lib/anthropic";
+import { createLlmClientWithSettings } from "@/lib/llm";
 import { getCachedPapers, getFeedback, mergeFeedback, getResearchConfig } from "@/lib/data";
 import type { Paper } from "@/lib/types";
 import { type Language, prompts } from "@/lib/i18n";
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { client, model } = await createAnthropicClientWithSettings();
+    const client = await createLlmClientWithSettings();
     const config = await getResearchConfig();
     const lang: Language = config.language === "en" ? "en" : "zh";
 
@@ -34,19 +34,10 @@ export async function POST(request: NextRequest) {
       )
       .join("\n\n");
 
-    const response = await client.messages.create({
-      model,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: prompts.filter[lang](focus, paperList),
-        },
-      ],
-    });
-
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "[]";
+    const text = await client.generateText(
+      prompts.filter[lang](focus, paperList),
+      1024
+    );
 
     let rankings: { index: number; score: number }[];
     try {

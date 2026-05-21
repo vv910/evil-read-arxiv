@@ -59,9 +59,14 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.deleteFolder": "删除文件夹",
 
     // Settings page
+    "settings.aiConfig": "AI 模型配置",
+    "settings.aiConfigDesc": "选择 Claude、Codex/OpenAI API 或本机 Codex CLI 作为论文摘要、筛选和偏好分析的模型提供方。",
     "settings.claudeConfig": "Claude 模型配置",
     "settings.claudeConfigDesc": "已内置默认 API，无需配置即可使用。以下选项仅用于自定义覆盖。",
+    "settings.provider": "模型提供方",
     "settings.modelSelection": "模型选择",
+    "settings.reasoningEffort": "推理强度",
+    "settings.baseUrlLabel": "API Base URL",
     "settings.apiKeyLabel": "API Key（留空使用默认）",
     "settings.apiKeyPlaceholder": "留空使用内置默认 API",
     "settings.researchInterests": "研究兴趣",
@@ -139,9 +144,14 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.deleteFolder": "Delete folder",
 
     // Settings page
+    "settings.aiConfig": "AI Model Configuration",
+    "settings.aiConfigDesc": "Choose Claude, the Codex/OpenAI API, or the local Codex CLI for paper summaries, filtering, and preference analysis.",
     "settings.claudeConfig": "Claude Model Configuration",
     "settings.claudeConfigDesc": "Built-in default API is ready to use. Options below are for custom overrides only.",
+    "settings.provider": "Provider",
     "settings.modelSelection": "Model",
+    "settings.reasoningEffort": "Reasoning effort",
+    "settings.baseUrlLabel": "API Base URL",
     "settings.apiKeyLabel": "API Key (leave empty for default)",
     "settings.apiKeyPlaceholder": "Leave empty to use built-in default API",
     "settings.researchInterests": "Research Interests",

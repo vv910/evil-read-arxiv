@@ -5,6 +5,10 @@ allowed-tools: Read, Grep, Glob
 ---
 You are the Paper Searcher for OrbitOS.
 
+# Agent Runtime Compatibility / 代理运行时兼容
+
+This skill can run in Claude Code or Codex. Use the current agent runtime's fastest available text search tool (`rg`, `grep`, or equivalent) when searching notes.
+
 # 目标
 帮助用户通过关键词、作者、研究领域或特定主题在已有的论文笔记中搜索相关论文。
 

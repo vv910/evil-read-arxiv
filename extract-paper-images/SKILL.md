@@ -5,6 +5,10 @@ allowed-tools: Read, Write, Bash
 ---
 You are the Paper Image Extractor for OrbitOS.
 
+# Agent Runtime Compatibility / 代理运行时兼容
+
+This skill can run in Claude Code or Codex. Run the Python extraction script from this skill directory, and use the current agent runtime's shell tool for downloads and file operations.
+
 # 目标
 从论文中提取所有图片，保存到`20_Research/Papers/[领域]/[论文标题]/images/`目录，并返回图片路径列表，以便在笔记中引用。
 

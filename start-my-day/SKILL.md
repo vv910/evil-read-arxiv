@@ -3,6 +3,13 @@ name: start-my-day
 description: 论文阅读工作流启动 - 生成今日论文推荐笔记 / Paper reading workflow starter - Generate daily paper recommendations
 ---
 
+# Agent Runtime Compatibility / 代理运行时兼容
+
+This skill can run in Claude Code or Codex. Before executing command snippets:
+
+- Set `OBSIDIAN_VAULT_PATH` to the target Obsidian vault.
+- If `SKILL_DIR` is not provided by the agent runtime, set it to this skill directory.
+
 # Language Setting / 语言设置
 
 This skill supports both Chinese and English reports. The language is determined by the `language` field in your config file:
@@ -18,7 +25,7 @@ At the start of execution, read the config file to detect the language setting:
 
 ```bash
 # Resolve OBSIDIAN_VAULT_PATH if not set in the current session
-# Claude Code bash sessions do not source ~/.zshrc automatically
+# Agent shell sessions may not source ~/.zshrc automatically
 if [ -z "$OBSIDIAN_VAULT_PATH" ]; then
     [ -f "$HOME/.zshrc" ] && source "$HOME/.zshrc" 2>/dev/null || true
     [ -f "$HOME/.bash_profile" ] && source "$HOME/.bash_profile" 2>/dev/null || true

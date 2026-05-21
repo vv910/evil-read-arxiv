@@ -9,13 +9,13 @@ A Next.js web app for daily arXiv paper recommendations with AI-powered summarie
 | Framework | Next.js 16 (App Router) |
 | Frontend | React 19, TypeScript 5 |
 | Styling | TailwindCSS 4, CSS Variables (dark theme) |
-| AI | Anthropic Claude SDK v0.90 |
+| AI | Anthropic Claude SDK v0.90 + OpenAI-compatible Responses API |
 | Backend Bridge | Python subprocess (`search_arxiv.py`) |
 | Data Storage | JSON files + YAML config (no database required) |
 
 ## Features
 
-- **AI Summaries** — Auto-generated paper summaries (main content + innovations) via Claude
+- **AI Summaries** — Auto-generated paper summaries (main content + innovations) via Claude or Codex/OpenAI
 - **Deep Dive Analysis** — On-demand 4-section analysis (contribution, innovation, method, results) with paper figure extraction
 - **Interest-based Search** — Search by topic with two modes: AI semantic filtering or fresh arXiv search
 - **Paper Image Extraction** — Auto-extracts figures from arXiv source packages, with size filtering to skip icons and UI fragments
@@ -28,7 +28,7 @@ A Next.js web app for daily arXiv paper recommendations with AI-powered summarie
 
 - **Node.js** 20+
 - **Python** 3.8+ (for arXiv search backend)
-- **Anthropic API Key** (Claude)
+- **Anthropic API Key or OpenAI API Key** (Claude or Codex/OpenAI)
 
 ## Quick Start
 
@@ -45,7 +45,7 @@ npm install
 
 ### 2. Configure API
 
-You need to provide your own Anthropic API key. There are three ways (in priority order):
+You need to provide your own Anthropic API key or OpenAI API key (in priority order):
 
 **Option A: `data/api_settings.json` (Recommended)**
 
@@ -53,11 +53,35 @@ Create `data/api_settings.json` at the project root:
 
 ```json
 {
+  "provider": "claude",
   "model": "claude-sonnet-4-6",
   "api_key": "sk-ant-your-key",
   "base_url": "https://api.anthropic.com"
 }
 ```
+
+For Codex/OpenAI:
+
+```json
+{
+  "provider": "codex",
+  "model": "gpt-5.3-codex",
+  "api_key": "sk-your-openai-key",
+  "base_url": "https://api.openai.com/v1"
+}
+```
+
+If you do not have an OpenAI API key but have logged in to the local Codex CLI:
+
+```json
+{
+  "provider": "codex-cli",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh"
+}
+```
+
+`reasoning_effort` defaults to `xhigh`, which is suitable for paper analysis; you can adjust it in Settings.
 
 You can also configure this via the Settings page (`/settings`) in the app.
 
@@ -69,13 +93,21 @@ Create `web/.env.local`:
 ANTHROPIC_API_KEY=sk-ant-your-key
 # Optional: custom API endpoint (e.g., proxy)
 ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+# Or use Codex/OpenAI
+AI_PROVIDER=codex
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Or use the local Codex CLI (requires codex login first)
+AI_PROVIDER=codex-cli
+# Optional: override model or binary path
+AI_MODEL=gpt-5.5
+AI_REASONING_EFFORT=xhigh
+CODEX_CLI_BIN=codex
 ```
 
-**Option C: Edit `src/lib/anthropic.ts` directly**
-
-Set `DEFAULT_API_KEY` and `DEFAULT_BASE_URL` constants in the source code (not recommended for public repos).
-
-Priority: `data/api_settings.json` > Environment variables > Code defaults.
+Priority: `data/api_settings.json` > environment variables > code defaults. You can also switch providers in Settings.
 
 ### 3. Configure Research Interests
 
@@ -109,7 +141,7 @@ Open http://localhost:3000 — redirects to `/papers`.
 | **Deep Dive** | Click the "Deep Dive" button on any paper to generate a detailed 4-section AI analysis with extracted figures. |
 | **Feedback** | Rate papers (Like / Neutral / Not Interested) to train your preference model. After 10 ratings, AI auto-analyzes your preferences. |
 | **Favorites** (`/favorites`) | Liked papers appear here. Create folders, drag-and-drop to organize. |
-| **Settings** (`/settings`) | Switch language (zh/en), change Claude model, set API key, manage research domains and priorities. |
+| **Settings** (`/settings`) | Switch language (zh/en), choose Claude or Codex/OpenAI, set API key, manage research domains and priorities. |
 
 ## Project Structure
 
@@ -148,7 +180,7 @@ web/
 │       ├── api.ts                   # Frontend API client
 │       ├── types.ts                 # TypeScript interfaces
 │       ├── data.ts                  # File I/O + caching utilities
-│       ├── anthropic.ts             # Claude client initialization
+│       ├── llm.ts                   # Claude / Codex provider adapter
 │       ├── python-bridge.ts         # Python subprocess wrapper
 │       └── i18n.ts                  # Translation strings (zh/en)
 ├── public/
@@ -173,7 +205,7 @@ All data lives in `data/` at the project root (auto-created):
 ## How It Works
 
 1. Frontend calls `search_arxiv.py` via Node child process to search arXiv + Semantic Scholar
-2. Results are batch-summarized by Claude, cached per date and language
+2. Results are batch-summarized by the configured AI provider, cached per date and language
 3. Users browse papers; clicking "Deep Dive" triggers on-demand detailed analysis with figure extraction
-4. Feedback is collected and periodically analyzed by Claude to update recommendation weights in `preferences.json`
-5. Language setting controls both UI text and Claude prompt language
+4. Feedback is collected and periodically analyzed by the configured AI provider to update recommendation weights in `preferences.json`
+5. Language setting controls both UI text and AI prompt language

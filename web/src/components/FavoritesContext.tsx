@@ -60,7 +60,13 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   // Load once on first mount
   useEffect(() => {
     if (!initialized && !loading) {
-      reload();
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (!cancelled) reload();
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [initialized, loading, reload]);
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAnthropicClientWithSettings } from "@/lib/anthropic";
+import { createLlmClientWithSettings } from "@/lib/llm";
 import {
   getFeedback,
   getPreferences,
@@ -44,7 +44,7 @@ export async function POST() {
       } satisfies PreferenceUpdateResult);
     }
 
-    const { client, model } = await createAnthropicClientWithSettings();
+    const client = await createLlmClientWithSettings();
 
     const prompt = `You are a research interest analyzer. Based on the user's paper feedback, analyze their preference patterns and suggest updates to their research interest configuration.
 
@@ -76,14 +76,7 @@ Analyze the feedback patterns and output a JSON object with these exact fields:
 
 Only output the JSON object, no markdown fences or explanation.`;
 
-    const response = await client.messages.create({
-      model,
-      max_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    const text = await client.generateText(prompt, 2048);
     const changes = JSON.parse(text);
 
     const newPrefs = { ...currentPrefs };
