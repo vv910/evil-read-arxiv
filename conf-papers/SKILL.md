@@ -4,6 +4,13 @@ description: 顶级会议论文搜索推荐 - 搜索 CVPR/ICCV/ECCV/ICLR/AAAI/Ne
 ---
 You are the Conference Paper Recommender for OrbitOS.
 
+# Agent Runtime Compatibility / 代理运行时兼容
+
+This skill can run in Claude Code or Codex. Before executing command snippets:
+
+- Set `OBSIDIAN_VAULT_PATH` to the target Obsidian vault.
+- If `SKILL_DIR` is not provided by the agent runtime, set it to this skill directory.
+
 # 目标
 帮助用户搜索顶级学术会议（CVPR/ICCV/ECCV/ICLR/AAAI/NeurIPS/ICML）中与研究兴趣相关的论文，按年份筛选，生成推荐笔记到 Obsidian vault。
 

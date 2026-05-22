@@ -9,7 +9,7 @@
 
 ## 简介
 
-这是一套 Claude Code 技能（Skills）集合，用于自动化研究论文的搜索、推荐、分析和整理工作流。通过调用 arXiv 和 Semantic Scholar API，每天为你推荐高质量论文，并自动生成详细笔记和关系图谱。
+这是一套兼容 Claude Code 和 Codex 的技能（Skills）集合，用于自动化研究论文的搜索、推荐、分析和整理工作流。通过调用 arXiv 和 Semantic Scholar API，每天为你推荐高质量论文，并自动生成详细笔记和关系图谱。
 
 ## 更新日志
 
@@ -62,23 +62,23 @@
 
 ### 6. Web 应用 - 论文推荐网页端
 基于 Next.js 16 的独立 Web 应用，提供可视化论文浏览体验。详见 [web/README.zh.md](web/README.zh.md)。
-- **AI 智能摘要** — 搜索论文时自动调用 Claude 批量生成摘要（主要内容 + 创新点）
+- **AI 智能摘要** — 搜索论文时自动调用 Claude 或 Codex/OpenAI 批量生成摘要（主要内容 + 创新点）
 - **深入了解** — 按需生成四维深度分析（核心贡献、创新点、方法概要、关键结果），并提取论文插图
 - **兴趣方向搜索** — 支持两种模式：AI 语义筛选已有结果 / 重新搜索 arXiv
 - **反馈与偏好学习** — 喜欢/一般/不感兴趣评价，10 条反馈后 AI 自动分析偏好并调整推荐权重
 - **收藏夹** — 文件夹管理收藏论文，支持拖拽分类
 - **中英双语** — UI 界面和 AI 提示词均支持中英文切换
 - **多端适配** — 桌面双栏布局 + 移动端滑动卡片，支持手势导航
-- **技术栈**：Next.js 16 + React 19 + TypeScript + TailwindCSS 4 + Anthropic Claude SDK
+- **技术栈**：Next.js 16 + React 19 + TypeScript + TailwindCSS 4 + Anthropic Claude SDK + OpenAI-compatible Responses API
 
 ## 安装
 
 ### 前置要求
 
-1. **Claude Code CLI** - 需要安装并配置 Claude Code（CLI 技能所需）
+1. **Claude Code CLI 或 Codex CLI** - CLI 技能至少需要安装其中一个
 2. **Python 3.8+** - 用于运行搜索和分析脚本
 3. **Node.js 20+** - Web 应用所需
-4. **Anthropic API Key** - Web 应用的 AI 功能所需（Claude）
+4. **Anthropic API Key 或 OpenAI API Key** - Web 应用的 AI 功能所需（Claude 或 Codex/OpenAI）
 5. **Python 依赖**：
    ```bash
    pip install -r requirements.txt
@@ -88,7 +88,20 @@
 
 #### 方式一：CLI 技能安装
 
-将技能复制到 Claude Code skills 目录：
+推荐使用安装脚本，将技能安装到 Claude Code 和 Codex：
+
+```bash
+python scripts/install_skills.py --target both
+```
+
+也可以只安装到一个运行时：
+
+```bash
+python scripts/install_skills.py --target claude
+python scripts/install_skills.py --target codex
+```
+
+手动安装时，将技能复制到 Claude Code 或 Codex 的 skills 目录：
 
 ```bash
 # Windows PowerShell
@@ -96,15 +109,17 @@ Copy-Item -Recurse evil-read-arxiv\start-my-day $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\paper-analyze $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\extract-paper-images $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\paper-search $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse evil-read-arxiv\conf-papers $env:USERPROFILE\.claude\skills\
 
 # macOS/Linux
 cp -r evil-read-arxiv/start-my-day ~/.claude/skills/
 cp -r evil-read-arxiv/paper-analyze ~/.claude/skills/
 cp -r evil-read-arxiv/extract-paper-images ~/.claude/skills/
 cp -r evil-read-arxiv/paper-search ~/.claude/skills/
+cp -r evil-read-arxiv/conf-papers ~/.claude/skills/
 ```
 
-配置环境变量和路径（见下文"配置"部分），然后重启 Claude Code CLI。
+配置环境变量和路径（见下文"配置"部分），然后重启 Claude Code 或 Codex。
 
 #### 方式二：Web 应用安装
 
@@ -121,7 +136,7 @@ cd ..
 cp config.example.yaml config.yaml
 # 编辑 config.yaml，填入你的研究领域和关键词
 
-# 4. 配置 API Key（三选一，按优先级排序）
+# 4. 配置 API Key（按优先级排序）
 ```
 
 **API Key 配置方式：**
@@ -132,11 +147,35 @@ cp config.example.yaml config.yaml
 
 ```json
 {
+  "provider": "claude",
   "model": "claude-sonnet-4-6",
   "api_key": "sk-ant-your-key",
   "base_url": "https://api.anthropic.com"
 }
 ```
+
+使用 Codex/OpenAI 时：
+
+```json
+{
+  "provider": "codex",
+  "model": "gpt-5.3-codex",
+  "api_key": "sk-your-openai-key",
+  "base_url": "https://api.openai.com/v1"
+}
+```
+
+如果没有 OpenAI API Key，但本机已经登录 Codex CLI，可以使用本机 CLI：
+
+```json
+{
+  "provider": "codex-cli",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh"
+}
+```
+
+`reasoning_effort` 默认使用 `xhigh`，适合论文分析；也可以在设置页调整。
 
 也可以启动应用后在设置页面（`/settings`）中直接配置。
 
@@ -148,13 +187,21 @@ cp config.example.yaml config.yaml
 ANTHROPIC_API_KEY=sk-ant-your-key
 # 可选：自定义 API 地址（如代理）
 ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+# 或使用 Codex/OpenAI
+AI_PROVIDER=codex
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# 或使用本机 Codex CLI（需先 codex login）
+AI_PROVIDER=codex-cli
+# 可选：指定 CLI 模型或路径
+AI_MODEL=gpt-5.5
+AI_REASONING_EFFORT=xhigh
+CODEX_CLI_BIN=codex
 ```
 
-**方式 C：直接修改源码**（不推荐在公开仓库使用）
-
-修改 `web/src/lib/anthropic.ts` 中的 `DEFAULT_API_KEY` 和 `DEFAULT_BASE_URL` 常量。
-
-> 优先级：`data/api_settings.json` > 环境变量 > 代码默认值
+> 优先级：`data/api_settings.json` > 环境变量 > 代码默认值。服务端默认 `provider` 为 `claude`；也可以在设置页面切换为 `codex` 或 `codex-cli`。
 
 ```bash
 # 5. 启动 Web 应用

@@ -1,4 +1,5 @@
 {
-  "model": "claude-sonnet-4-6",
-  "api_key": "YOUR_API_KEY"
+  "provider": "codex-cli",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh"
 }

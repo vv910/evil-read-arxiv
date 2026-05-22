@@ -9,13 +9,13 @@
 | 框架 | Next.js 16 (App Router) |
 | 前端 | React 19, TypeScript 5 |
 | 样式 | TailwindCSS 4, CSS Variables (暗色主题) |
-| AI | Anthropic Claude SDK v0.90 |
+| AI | Anthropic Claude SDK v0.90 + OpenAI-compatible Responses API |
 | 后端桥接 | Python 子进程 (`search_arxiv.py`) |
 | 数据存储 | JSON 文件 + YAML 配置（无需数据库） |
 
 ## 功能特性
 
-- **AI 智能摘要** — 搜索论文时自动调用 Claude 批量生成摘要（主要内容 + 创新点）
+- **AI 智能摘要** — 搜索论文时自动调用 Claude 或 Codex/OpenAI 批量生成摘要（主要内容 + 创新点）
 - **深入了解** — 按需生成四维深度分析（核心贡献、创新点、方法概要、关键结果），并提取论文插图
 - **兴趣方向搜索** — 支持两种模式：AI 语义筛选已有结果 / 重新搜索 arXiv
 - **论文图片提取** — 自动从 arXiv 源码包提取论文插图，支持尺寸过滤跳过图标和 UI 碎片
@@ -28,7 +28,7 @@
 
 - **Node.js** 20+
 - **Python** 3.8+（用于 arXiv 搜索后端）
-- **Anthropic API Key**（Claude）
+- **Anthropic API Key 或 OpenAI API Key**（Claude 或 Codex/OpenAI）
 
 ## 快速开始
 
@@ -45,7 +45,7 @@ npm install
 
 ### 2. 配置 API
 
-你需要提供自己的 Anthropic API Key，有三种方式（按优先级排序）：
+你需要提供自己的 Anthropic API Key 或 OpenAI API Key（按优先级排序）：
 
 **方式 A：`data/api_settings.json`（推荐）**
 
@@ -53,11 +53,35 @@ npm install
 
 ```json
 {
+  "provider": "claude",
   "model": "claude-sonnet-4-6",
   "api_key": "sk-ant-your-key",
   "base_url": "https://api.anthropic.com"
 }
 ```
+
+使用 Codex/OpenAI 时：
+
+```json
+{
+  "provider": "codex",
+  "model": "gpt-5.3-codex",
+  "api_key": "sk-your-openai-key",
+  "base_url": "https://api.openai.com/v1"
+}
+```
+
+如果没有 OpenAI API Key，但本机已经登录 Codex CLI，可以使用本机 CLI：
+
+```json
+{
+  "provider": "codex-cli",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh"
+}
+```
+
+`reasoning_effort` 默认使用 `xhigh`，适合论文分析；也可以在设置页调整。
 
 也可以启动应用后在设置页面（`/settings`）中配置。
 
@@ -69,13 +93,21 @@ npm install
 ANTHROPIC_API_KEY=sk-ant-your-key
 # 可选：自定义 API 地址（如代理）
 ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+# 或使用 Codex/OpenAI
+AI_PROVIDER=codex
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# 或使用本机 Codex CLI（需先 codex login）
+AI_PROVIDER=codex-cli
+# 可选：指定 CLI 模型或路径
+AI_MODEL=gpt-5.5
+AI_REASONING_EFFORT=xhigh
+CODEX_CLI_BIN=codex
 ```
 
-**方式 C：直接修改 `src/lib/anthropic.ts`**
-
-修改源码中的 `DEFAULT_API_KEY` 和 `DEFAULT_BASE_URL` 常量（不推荐在公开仓库使用）。
-
-优先级：`data/api_settings.json` > 环境变量 > 代码默认值。
+优先级：`data/api_settings.json` > 环境变量 > 代码默认值。也可以启动应用后在设置页面切换提供方。
 
 ### 3. 配置研究兴趣
 
@@ -109,7 +141,7 @@ npm run build && npm start
 | **深入了解** | 点击论文上的「深入了解」按钮，按需生成四维 AI 详细分析，并展示提取的论文插图。 |
 | **反馈** | 对论文评价（喜欢/一般/不感兴趣），训练你的偏好模型。累计 10 条评价后 AI 自动分析偏好。 |
 | **收藏** (`/favorites`) | 标记喜欢的论文会出现在收藏页，可创建文件夹、拖拽整理。 |
-| **设置** (`/settings`) | 切换语言（中/英）、更换 Claude 模型、设置 API Key、管理研究领域及优先级。 |
+| **设置** (`/settings`) | 切换语言（中/英）、选择 Claude 或 Codex/OpenAI、设置 API Key、管理研究领域及优先级。 |
 
 ## 项目结构
 
@@ -148,7 +180,7 @@ web/
 │       ├── api.ts                   # 前端 API 客户端
 │       ├── types.ts                 # TypeScript 类型定义
 │       ├── data.ts                  # 文件读写 + 缓存工具
-│       ├── anthropic.ts             # Claude 客户端初始化
+│       ├── llm.ts                   # Claude / Codex 模型适配
 │       ├── python-bridge.ts         # Python 子进程桥接
 │       └── i18n.ts                  # 翻译字符串（中/英）
 ├── public/
@@ -173,7 +205,7 @@ web/
 ## 工作原理
 
 1. 前端通过 `python-bridge.ts` 调用 `search_arxiv.py`，按 `config.yaml` 搜索 arXiv + Semantic Scholar
-2. 搜索结果由 Claude 批量生成摘要，按日期和语言缓存
+2. 搜索结果由当前 AI 提供方批量生成摘要，按日期和语言缓存
 3. 用户浏览论文，点击「深入了解」按需触发详细分析并提取论文插图
-4. 用户反馈定期由 Claude 分析，自动更新 `preferences.json` 中的推荐权重
-5. 语言设置同时控制 UI 文本和 Claude 提示词语言
+4. 用户反馈定期由当前 AI 提供方分析，自动更新 `preferences.json` 中的推荐权重
+5. 语言设置同时控制 UI 文本和 AI 提示词语言

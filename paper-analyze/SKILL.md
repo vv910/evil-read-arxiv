@@ -4,6 +4,10 @@ description: 深度分析单篇论文，生成详细笔记和评估，图文并�
 allowed-tools: Read, Write, Bash, WebFetch
 ---
 
+# Agent Runtime Compatibility / 代理运行时兼容
+
+This skill can run in Claude Code or Codex. If `WebFetch` is not available in the current agent runtime, use `curl` or the runtime's web-fetching tool for arXiv metadata pages.
+
 # Language Setting / 语言设置
 
 This skill supports both Chinese and English reports. The language is determined by the `language` field in your config file:

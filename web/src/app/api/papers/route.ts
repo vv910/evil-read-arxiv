@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClientWithSettings } from "@/lib/anthropic";
+import {
+  createLlmClientWithSettings,
+  type LlmClient,
+} from "@/lib/llm";
 import {
   getCachedPapers,
   cachePapers,
@@ -16,26 +18,17 @@ import { type Language, prompts } from "@/lib/i18n";
 
 async function generateSummary(
   paper: Paper,
-  client: Anthropic,
-  model: string,
+  client: LlmClient,
   lang: Language
 ): Promise<string> {
   try {
-    const response = await client.messages.create({
-      model,
-      max_tokens: 512,
-      messages: [
-        {
-          role: "user",
-          content: prompts.summary[lang](
-            paper.title,
-            paper.original_abstract || paper.summary
-          ),
-        },
-      ],
-    });
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    const text = await client.generateText(
+      prompts.summary[lang](
+        paper.title,
+        paper.original_abstract || paper.summary
+      ),
+      512
+    );
     return text.trim();
   } catch (err) {
     console.error(`Summary generation failed for ${paper.arxiv_id}:`, err);
@@ -45,17 +38,16 @@ async function generateSummary(
 
 async function batchGenerateSummaries(
   papers: Paper[],
-  client: Anthropic,
-  model: string,
+  client: LlmClient,
   lang: Language
 ): Promise<Paper[]> {
-  const CONCURRENCY = 5;
+  const CONCURRENCY = client.provider === "codex-cli" ? 1 : 5;
   const results = [...papers];
 
   for (let i = 0; i < results.length; i += CONCURRENCY) {
     const batch = results.slice(i, i + CONCURRENCY);
     const summaries = await Promise.allSettled(
-      batch.map((p) => generateSummary(p, client, model, lang))
+      batch.map((p) => generateSummary(p, client, lang))
     );
 
     summaries.forEach((result, idx) => {
@@ -85,8 +77,7 @@ async function batchGenerateSummaries(
 async function maybeAddResearchDomain(
   focus: string,
   papers: Paper[],
-  client: Anthropic,
-  model: string,
+  client: LlmClient,
   lang: Language
 ): Promise<void> {
   try {
@@ -100,25 +91,16 @@ async function maybeAddResearchDomain(
     );
     if (alreadyExists) return;
 
-    // Use Claude to generate a domain config for this new interest
+    // Use the configured AI provider to generate a domain config for this new interest
     const sampleTitles = papers
       .slice(0, 5)
       .map((p) => p.title)
       .join("\n");
 
-    const response = await client.messages.create({
-      model,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: prompts.domain[lang](focus, sampleTitles),
-        },
-      ],
-    });
-
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    const text = await client.generateText(
+      prompts.domain[lang](focus, sampleTitles),
+      1024
+    );
     let domainConfig: { domain_name: string; keywords: string[]; arxiv_categories: string[] };
     try {
       domainConfig = JSON.parse(text);
@@ -146,25 +128,16 @@ async function maybeAddResearchDomain(
 
 async function translateFocusToEnglish(
   focus: string,
-  client: Anthropic,
-  model: string,
+  client: LlmClient,
   lang: Language
 ): Promise<string> {
   if (/^[\x00-\x7F\s]+$/.test(focus)) return focus;
 
   try {
-    const response = await client.messages.create({
-      model,
-      max_tokens: 200,
-      messages: [
-        {
-          role: "user",
-          content: prompts.translateFocus[lang](focus),
-        },
-      ],
-    });
-    const text =
-      response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    const text = await client.generateText(
+      prompts.translateFocus[lang](focus),
+      200
+    );
     return text || focus;
   } catch {
     return focus;
@@ -195,14 +168,11 @@ export async function GET(request: NextRequest) {
 
       // Translate Chinese focus to English keywords for arXiv search
       let searchFocus = focus;
-      let client: Anthropic | null = null;
-      let model = "claude-sonnet-4-6";
+      let client: LlmClient | null = null;
       if (focus) {
         try {
-          const resolved = await createAnthropicClientWithSettings();
-          client = resolved.client;
-          model = resolved.model;
-          searchFocus = await translateFocusToEnglish(focus, client, model, lang);
+          client = await createLlmClientWithSettings();
+          searchFocus = await translateFocusToEnglish(focus, client, lang);
           console.log(`Focus translated: "${focus}" → "${searchFocus}"`);
         } catch {
           searchFocus = focus;
@@ -219,15 +189,13 @@ export async function GET(request: NextRequest) {
 
       try {
         if (!client) {
-          const resolved = await createAnthropicClientWithSettings();
-          client = resolved.client;
-          model = resolved.model;
+          client = await createLlmClientWithSettings();
         }
-        summarizedPapers = await batchGenerateSummaries(papers, client, model, lang);
+        summarizedPapers = await batchGenerateSummaries(papers, client, lang);
 
         // Auto-add new research domain if this is a focus search with results
         if (focus && summarizedPapers.length > 0) {
-          maybeAddResearchDomain(focus, papers, client, model, lang).catch(() => {});
+          maybeAddResearchDomain(focus, papers, client, lang).catch(() => {});
         }
       } catch (err) {
         console.warn("Skipping AI summaries:", err instanceof Error ? err.message : err);

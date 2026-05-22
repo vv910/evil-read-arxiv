@@ -32,21 +32,26 @@ export default function PaperCard({ paper, onFeedback }: PaperCardProps) {
   useEffect(() => {
     let cancelled = false;
 
-    // Reset state for new paper
-    setAnalysis(paper.highlights || null);
-    setImages(paper.images || []);
-    setShowAnalysis(!!paper.highlights);
-    setLoadingAnalysis(false);
-    setLightboxImg(null);
+    queueMicrotask(() => {
+      if (cancelled) return;
 
-    // Load images (lightweight, cached on server)
-    if (!paper.images?.length) {
-      setLoadingImages(true);
-      fetchPaperImages(paper.arxiv_id)
-        .then((data) => { if (!cancelled) setImages(data); })
-        .catch((err) => { if (!cancelled) console.error("Image loading failed:", err); })
-        .finally(() => { if (!cancelled) setLoadingImages(false); });
-    }
+      // Reset state for new paper
+      setAnalysis(paper.highlights || null);
+      setImages(paper.images || []);
+      setShowAnalysis(!!paper.highlights);
+      setLoadingAnalysis(false);
+      setLoadingImages(false);
+      setLightboxImg(null);
+
+      // Load images (lightweight, cached on server)
+      if (!paper.images?.length) {
+        setLoadingImages(true);
+        fetchPaperImages(paper.arxiv_id)
+          .then((data) => { if (!cancelled) setImages(data); })
+          .catch((err) => { if (!cancelled) console.error("Image loading failed:", err); })
+          .finally(() => { if (!cancelled) setLoadingImages(false); });
+      }
+    });
 
     return () => { cancelled = true; };
   }, [paper.arxiv_id, paper.highlights, paper.images]);

@@ -115,7 +115,7 @@ export function PapersProvider({ children }: { children: React.ReactNode }) {
           if (!abortRef.current) setLoading(false);
         });
     },
-    [date, loadPapers]
+    [date, dateRange, loadPapers]
   );
 
   const handleFilter = useCallback(
@@ -157,7 +157,13 @@ export function PapersProvider({ children }: { children: React.ReactNode }) {
   // Initial load
   useEffect(() => {
     if (!initialized && !loading) {
-      loadPapers(date);
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (!cancelled) loadPapers(date);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [date, initialized, loading, loadPapers]);
 
@@ -167,12 +173,19 @@ export function PapersProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (prevLangRef.current !== language && initialized) {
       prevLangRef.current = language;
-      // Force reload: server will use new language for cache key + prompts
-      if (activeFocus) {
-        handleSearch(activeFocus);
-      } else {
-        setInitialized(false);
-      }
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (cancelled) return;
+        // Force reload: server will use new language for cache key + prompts
+        if (activeFocus) {
+          handleSearch(activeFocus);
+        } else {
+          setInitialized(false);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [language, initialized, activeFocus, handleSearch]);
 

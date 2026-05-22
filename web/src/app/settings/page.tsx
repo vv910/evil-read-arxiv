@@ -1,15 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { AppSettings, ResearchDomain } from "@/lib/types";
+import type { AiProvider, AppSettings, ResearchDomain } from "@/lib/types";
 import { fetchSettings, saveSettings, updatePreferences } from "@/lib/api";
 import { useLanguage } from "@/components/LanguageContext";
 
-const MODEL_OPTIONS = [
-  "claude-opus-4-6",
-  "claude-sonnet-4-6",
-  "claude-haiku-4-5-20251001",
-];
+const MODEL_OPTIONS: Record<AiProvider, string[]> = {
+  claude: [
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001",
+  ],
+  codex: ["gpt-5.3-codex", "gpt-5.3-codex-spark", "gpt-5.4"],
+  "codex-cli": ["gpt-5.5", "gpt-5.4", "gpt-5.3-codex"],
+};
+
+const DEFAULT_BASE_URLS: Record<AiProvider, string> = {
+  claude: "https://api.anthropic.com",
+  codex: "https://api.openai.com/v1",
+  "codex-cli": "",
+};
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -72,6 +82,38 @@ export default function SettingsPage() {
     });
   }
 
+  function updateAi(patch: Partial<AppSettings["ai"]>) {
+    if (!settings) return;
+    const nextAi = { ...settings.ai, ...patch };
+    setSettings({
+      ...settings,
+      ai: nextAi,
+      claude: {
+        ...settings.claude,
+        model: nextAi.provider === "claude" ? nextAi.model : settings.claude.model,
+        api_key: nextAi.provider === "claude" ? nextAi.api_key : settings.claude.api_key,
+        max_tokens: nextAi.max_tokens,
+      },
+    });
+  }
+
+  function updateProvider(provider: AiProvider) {
+    if (!settings) return;
+    const previousProvider = settings.ai.provider;
+    const shouldReplaceBaseUrl =
+      !settings.ai.base_url ||
+      settings.ai.base_url === DEFAULT_BASE_URLS[previousProvider];
+    updateAi({
+      provider,
+      model: MODEL_OPTIONS[provider][0],
+      api_key: "",
+      reasoning_effort: provider === "codex-cli" ? "xhigh" : undefined,
+      base_url: shouldReplaceBaseUrl
+        ? DEFAULT_BASE_URLS[provider]
+        : settings.ai.base_url,
+    });
+  }
+
   function addDomain() {
     if (!settings) return;
     const name = prompt(t("settings.newDomainPrompt"));
@@ -119,42 +161,74 @@ export default function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto px-4 lg:px-6 py-4 lg:py-6 max-w-3xl mx-auto space-y-4 lg:space-y-5">
-      <Section title={`🤖 ${t("settings.claudeConfig")}`} color="var(--accent-blue)">
+      <Section title={`🤖 ${t("settings.aiConfig")}`} color="var(--accent-blue)">
         <p className="text-xs text-[var(--text-secondary)] mb-3">
-          {t("settings.claudeConfigDesc")}
+          {t("settings.aiConfigDesc")}
         </p>
-        <Field label={t("settings.modelSelection")}>
+        <Field label={t("settings.provider")}>
           <select
-            value={settings.claude.model}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                claude: { ...settings.claude, model: e.target.value },
-              })
-            }
+            value={settings.ai.provider}
+            onChange={(e) => updateProvider(e.target.value as AiProvider)}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded px-3 py-2 text-sm lg:text-base"
           >
-            {MODEL_OPTIONS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
+            <option value="claude">Claude / Anthropic</option>
+            <option value="codex">Codex / OpenAI</option>
+            <option value="codex-cli">Codex CLI</option>
           </select>
         </Field>
-        <Field label={t("settings.apiKeyLabel")}>
+        <Field label={t("settings.modelSelection")}>
           <input
-            type="password"
-            value={settings.claude.api_key}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                claude: { ...settings.claude, api_key: e.target.value },
-              })
-            }
+            list="ai-model-options"
+            value={settings.ai.model}
+            onChange={(e) => updateAi({ model: e.target.value })}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded px-3 py-2 text-sm lg:text-base"
-            placeholder={t("settings.apiKeyPlaceholder")}
           />
+          <datalist id="ai-model-options">
+            {MODEL_OPTIONS[settings.ai.provider].map((m) => (
+              <option key={m || "default"} value={m} />
+            ))}
+          </datalist>
         </Field>
+        {settings.ai.provider === "codex-cli" && (
+          <Field label={t("settings.reasoningEffort")}>
+            <select
+              value={settings.ai.reasoning_effort || "xhigh"}
+              onChange={(e) =>
+                updateAi({
+                  reasoning_effort: e.target.value as AppSettings["ai"]["reasoning_effort"],
+                })
+              }
+              className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded px-3 py-2 text-sm lg:text-base"
+            >
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+              <option value="xhigh">xhigh</option>
+            </select>
+          </Field>
+        )}
+        {settings.ai.provider !== "codex-cli" && (
+          <>
+            <Field label={t("settings.baseUrlLabel")}>
+              <input
+                type="text"
+                value={settings.ai.base_url}
+                onChange={(e) => updateAi({ base_url: e.target.value })}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded px-3 py-2 text-sm lg:text-base"
+                placeholder={DEFAULT_BASE_URLS[settings.ai.provider]}
+              />
+            </Field>
+            <Field label={t("settings.apiKeyLabel")}>
+              <input
+                type="password"
+                value={settings.ai.api_key}
+                onChange={(e) => updateAi({ api_key: e.target.value })}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded px-3 py-2 text-sm lg:text-base"
+                placeholder={t("settings.apiKeyPlaceholder")}
+              />
+            </Field>
+          </>
+        )}
       </Section>
 
       <Section title={`🔬 ${t("settings.researchInterests")}`} color="var(--accent-green)">

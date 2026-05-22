@@ -103,7 +103,20 @@ export interface FavoritesData {
   folders: FavoriteFolder[];
 }
 
+export type AiProvider = "claude" | "codex" | "codex-cli";
+
+export interface AiSettings {
+  provider: AiProvider;
+  model: string;
+  api_key: string;
+  base_url: string;
+  max_tokens: number;
+  reasoning_effort?: "low" | "medium" | "high" | "xhigh";
+}
+
 export interface AppSettings {
+  ai: AiSettings;
+  /** @deprecated Use ai instead. Kept for older saved clients. */
   claude: {
     model: string;
     api_key: string;

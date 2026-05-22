@@ -9,7 +9,7 @@
 
 ## Introduction
 
-This is a collection of Claude Code Skills for automating research paper search, recommendation, analysis, and organization. By calling arXiv and Semantic Scholar APIs, it recommends high-quality papers daily and automatically generates detailed notes and knowledge graphs.
+This is a collection of skills compatible with Claude Code and Codex for automating research paper search, recommendation, analysis, and organization. By calling arXiv and Semantic Scholar APIs, it recommends high-quality papers daily and automatically generates detailed notes and knowledge graphs.
 
 ## Features
 
@@ -47,23 +47,23 @@ This is a collection of Claude Code Skills for automating research paper search,
 
 ### 5. Web App - Paper Recommendation Web Interface
 A standalone Next.js 16 web application for visual paper browsing. See [web/README.md](web/README.md) for details.
-- **AI Summaries** — Auto-generated paper summaries (main content + innovations) via Claude
+- **AI Summaries** — Auto-generated paper summaries (main content + innovations) via Claude or Codex/OpenAI
 - **Deep Dive Analysis** — On-demand 4-section analysis (contribution, innovation, method, results) with paper figure extraction
 - **Interest-based Search** — Two modes: AI semantic filtering or fresh arXiv search
 - **Feedback & Preference Learning** — Like/Neutral/Not Interested ratings; AI auto-adjusts weights after 10 feedbacks
 - **Favorites** — Organize liked papers into folders with drag-and-drop
 - **i18n** — Chinese / English UI and AI prompts, switchable in Settings
 - **Responsive** — Desktop dual-panel layout + mobile swipe cards with gesture navigation
-- **Tech Stack**: Next.js 16 + React 19 + TypeScript + TailwindCSS 4 + Anthropic Claude SDK
+- **Tech Stack**: Next.js 16 + React 19 + TypeScript + TailwindCSS 4 + Anthropic Claude SDK + OpenAI-compatible Responses API
 
 ## Installation
 
 ### Prerequisites
 
-1. **Claude Code CLI** - Install and configure Claude Code (required for CLI skills)
+1. **Claude Code CLI or Codex CLI** - Install at least one for CLI skills
 2. **Python 3.8+** - For running search and analysis scripts
 3. **Node.js 20+** - Required for Web app
-4. **Anthropic API Key** - Required for Web app AI features (Claude)
+4. **Anthropic API Key or OpenAI API Key** - Required for Web app AI features (Claude or Codex/OpenAI)
 5. **Python dependencies**:
    ```bash
    pip install -r requirements.txt
@@ -73,7 +73,20 @@ A standalone Next.js 16 web application for visual paper browsing. See [web/READ
 
 #### Option A: CLI Skills Installation
 
-Copy skills to your Claude Code skills directory:
+Recommended: install skills for both Claude Code and Codex:
+
+```bash
+python scripts/install_skills.py --target both
+```
+
+You can also install for one runtime:
+
+```bash
+python scripts/install_skills.py --target claude
+python scripts/install_skills.py --target codex
+```
+
+Manual install: copy skills to the Claude Code or Codex skills directory:
 
 ```bash
 # Windows PowerShell
@@ -81,15 +94,17 @@ Copy-Item -Recurse evil-read-arxiv\start-my-day $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\paper-analyze $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\extract-paper-images $env:USERPROFILE\.claude\skills\
 Copy-Item -Recurse evil-read-arxiv\paper-search $env:USERPROFILE\.claude\skills\
+Copy-Item -Recurse evil-read-arxiv\conf-papers $env:USERPROFILE\.claude\skills\
 
 # macOS/Linux
 cp -r evil-read-arxiv/start-my-day ~/.claude/skills/
 cp -r evil-read-arxiv/paper-analyze ~/.claude/skills/
 cp -r evil-read-arxiv/extract-paper-images ~/.claude/skills/
 cp -r evil-read-arxiv/paper-search ~/.claude/skills/
+cp -r evil-read-arxiv/conf-papers ~/.claude/skills/
 ```
 
-Configure environment variables and paths (see "Configuration" below), then restart Claude Code CLI.
+Configure environment variables and paths (see "Configuration" below), then restart Claude Code or Codex.
 
 #### Option B: Web App Installation
 
@@ -106,7 +121,7 @@ cd ..
 cp config.example.yaml config.yaml
 # Edit config.yaml with your research domains and keywords
 
-# 4. Configure API Key (choose one, in priority order)
+# 4. Configure API Key (in priority order)
 ```
 
 **API Key Configuration:**
@@ -117,11 +132,35 @@ Create `data/api_settings.json` at the project root:
 
 ```json
 {
+  "provider": "claude",
   "model": "claude-sonnet-4-6",
   "api_key": "sk-ant-your-key",
   "base_url": "https://api.anthropic.com"
 }
 ```
+
+For Codex/OpenAI:
+
+```json
+{
+  "provider": "codex",
+  "model": "gpt-5.3-codex",
+  "api_key": "sk-your-openai-key",
+  "base_url": "https://api.openai.com/v1"
+}
+```
+
+If you do not have an OpenAI API key but have logged in to the local Codex CLI:
+
+```json
+{
+  "provider": "codex-cli",
+  "model": "gpt-5.5",
+  "reasoning_effort": "xhigh"
+}
+```
+
+`reasoning_effort` defaults to `xhigh`, which is suitable for paper analysis; you can adjust it in Settings.
 
 You can also configure this via the Settings page (`/settings`) after launching the app.
 
@@ -133,13 +172,21 @@ Create `web/.env.local`:
 ANTHROPIC_API_KEY=sk-ant-your-key
 # Optional: custom API endpoint (e.g., proxy)
 ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+# Or use Codex/OpenAI
+AI_PROVIDER=codex
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Or use the local Codex CLI (requires codex login first)
+AI_PROVIDER=codex-cli
+# Optional: override model or binary path
+AI_MODEL=gpt-5.5
+AI_REASONING_EFFORT=xhigh
+CODEX_CLI_BIN=codex
 ```
 
-**Option C: Edit source code directly** (not recommended for public repos)
-
-Set `DEFAULT_API_KEY` and `DEFAULT_BASE_URL` constants in `web/src/lib/anthropic.ts`.
-
-> Priority: `data/api_settings.json` > Environment variables > Code defaults
+> Priority: `data/api_settings.json` > environment variables > code defaults. The server defaults to `provider: "claude"`; you can switch to `codex` or `codex-cli` in Settings.
 
 ```bash
 # 5. Start the Web app

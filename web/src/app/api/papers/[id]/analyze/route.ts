@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAnthropicClientWithSettings } from "@/lib/anthropic";
+import { createLlmClientWithSettings } from "@/lib/llm";
 import { getCachedAnalysis, cacheAnalysis, getResearchConfig } from "@/lib/data";
 import type { PaperAnalysis } from "@/lib/types";
 import { type Language, prompts } from "@/lib/i18n";
@@ -21,7 +21,7 @@ export async function GET(
       return NextResponse.json(cached);
     }
 
-    const { client, model } = await createAnthropicClientWithSettings();
+    const client = await createLlmClientWithSettings();
 
     // Try to get title/abstract from query params first (avoids arXiv rate limits)
     let title = req.nextUrl.searchParams.get("title") || "";
@@ -58,19 +58,10 @@ export async function GET(
       );
     }
 
-    const response = await client.messages.create({
-      model,
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "user",
-          content: prompts.analyze[lang](title, abstract),
-        },
-      ],
-    });
-
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    const text = await client.generateText(
+      prompts.analyze[lang](title, abstract),
+      2048
+    );
 
     let analysis: PaperAnalysis;
     try {
